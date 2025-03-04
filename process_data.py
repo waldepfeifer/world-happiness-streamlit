@@ -9,6 +9,7 @@ def create_countries_data_table():
     - legatum_prosperity (joined with an INNER JOIN to countries_metadata)
     - gdp_table
     - world_population
+    - quality_of_life
     """
     try:
         with duckdb.connect(DB_NAME) as conn:
@@ -22,6 +23,7 @@ def create_countries_data_table():
             INNER JOIN legatum_prosperity USING (Country)
             JOIN gdp_table USING (Country)
             JOIN world_population USING (Country)
+            JOIN quality_of_life USING (Country)
             """
             conn.execute(query)
             print("Table 'countries_data' created successfully.")
