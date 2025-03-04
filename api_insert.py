@@ -20,7 +20,6 @@ def create_db_and_table_if_not_exists():
         Subregion VARCHAR,
         Currencies VARCHAR,
         Languages VARCHAR,
-        Flag_URL VARCHAR
     );
     """
     conn.execute(create_table_query)
@@ -66,9 +65,8 @@ def transform_data(data):
         )
         # Process languages: join the language names
         languages = ", ".join(country.get("languages", {}).values())
-        flag_url = country.get("flags", {}).get("png", None)
         
-        transformed.append((country_name, region, subregion, currencies, languages, flag_url))
+        transformed.append((country_name, region, subregion, currencies, languages))
     return transformed
 
 def insert_into_duckdb(data):
@@ -80,8 +78,8 @@ def insert_into_duckdb(data):
         return
     conn = duckdb.connect(DB_NAME)
     insert_query = """
-        INSERT INTO countries_metadata (Country, Region, Subregion, Currencies, Languages, Flag_URL)
-        VALUES (?, ?, ?, ?, ?, ?);
+        INSERT INTO countries_metadata (Country, Region, Subregion, Currencies, Languages)
+        VALUES (?, ?, ?, ?, ?);
     """
     conn.executemany(insert_query, data)
     conn.close()

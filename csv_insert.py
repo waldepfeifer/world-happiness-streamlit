@@ -6,6 +6,7 @@ DB_NAME = "countries.ddb"
 CSV_FOLDER = "countries_csv"
 POPULATION_CSV = "world_population_data.csv"
 HAPPINESS_CSV = "world_happiness.csv"
+QUALITY_OF_LIFE_CSV = "quality_of_life.csv"
 
 def recreate_tables():
     """
@@ -16,20 +17,18 @@ def recreate_tables():
     # Drop existing tables
     conn.execute("DROP TABLE IF EXISTS world_population;")
     conn.execute("DROP TABLE IF EXISTS world_happiness;")
+    conn.execute("DROP TABLE IF EXISTS quality_of_life;")
 
     # Recreate world_population table
     conn.execute("""
     CREATE TABLE world_population (
         Country VARCHAR,
-        Population_2024 BIGINT,
-        Yearly_Change VARCHAR,
-        Net_Change BIGINT,
-        Density_P_Km2 DOUBLE,
-        Land_Area_Km2 DOUBLE,
-        Fert_Rate DOUBLE,
-        Med_Age INTEGER,
-        Urban_Pop_Pct VARCHAR,
-        World_Share VARCHAR
+        Population BIGINT,
+        PopChange BIGINT,
+        DensityKm2 DOUBLE,
+        LandAreaKm2 DOUBLE,
+        FertRate DOUBLE,
+        MedAge INTEGER,
     );
     """)
 
@@ -38,7 +37,19 @@ def recreate_tables():
     CREATE TABLE world_happiness (
         Country VARCHAR,
         Year INTEGER,
-        Happiness_Index DOUBLE
+        Happiness DOUBLE
+    );
+    """)
+
+    # Create quality_of_life table with only the required columns
+    conn.execute("""
+    CREATE TABLE quality_of_life (
+        Country VARCHAR,
+        PurchasingPower DOUBLE,
+        Climate DOUBLE,
+        CostofLiving DOUBLE,
+        TrafficCommuteTime DOUBLE,
+        Pollution DOUBLE
     );
     """)
 
@@ -64,14 +75,11 @@ def ingest_population_csv(file_path):
                 ELSE "Country"
             END AS Country,
             CAST(REPLACE("Population (2024)", ',', '') AS BIGINT),
-            "Yearly Change",
             CAST(REPLACE("Net Change", ',', '') AS BIGINT),
             CAST(REPLACE("Density (P/Km²)", ',', '') AS DOUBLE),
             CAST(REPLACE("Land Area (Km²)", ',', '') AS DOUBLE),
             CAST("Fert. Rate" AS DOUBLE),
             CAST("Med. Age" AS INTEGER),
-            "Urban Pop %",
-            "World Share"
         FROM read_csv_auto('{file_path}', header=True);
     """)
 
@@ -102,10 +110,41 @@ def ingest_happiness_csv(file_path):
 
     conn.close()
 
+def ingest_quality_of_life_csv(file_path):
+    """
+    Reads the quality_of_life CSV and inserts rows into the quality_of_life table.
+    Only the required columns are kept:
+    Purchasing Power Value, Climate Value, Cost of Living Value, 
+    Property Price to Income Value, Traffic Commute Time Value, Pollution Value.
+    The column 'country' is renamed to 'Country' and standardized.
+    """
+    conn = duckdb.connect(DB_NAME)
+    
+    conn.execute(f"""
+        INSERT INTO quality_of_life
+        SELECT 
+            CASE
+                WHEN "country" = 'United States' THEN 'United States of America'
+                WHEN "country" = 'Sao Tome And Principe' THEN 'São Tomé and Príncipe'
+                WHEN "country" = 'Cape Verde' THEN 'Cabo Verde'
+                WHEN "country" = 'Trinidad And Tobago' THEN 'Trinidad and Tobago'
+                WHEN "country" = 'Czech Republic' THEN 'Czechia'
+                WHEN "country" = 'Hong Kong (China)' THEN 'Hong Kong'
+                ELSE "country"
+            END AS Country,
+            CAST("Purchasing Power Value" AS DOUBLE),
+            CAST("Climate Value" AS DOUBLE),
+            CAST("Cost of Living Value" AS DOUBLE),
+            CAST("Traffic Commute Time Value" AS DOUBLE),
+            CAST("Pollution Value" AS  DOUBLE)
+        FROM read_csv_auto('{file_path}', header=True);
+    """)
+
 def main():
     # Determine file paths
     population_file_path = os.path.join(CSV_FOLDER, POPULATION_CSV)
     happiness_file_path = os.path.join(CSV_FOLDER, HAPPINESS_CSV)
+    quality_of_life_file_path = os.path.join(CSV_FOLDER, QUALITY_OF_LIFE_CSV)
 
     # Ensure both files exist
     if not os.path.exists(population_file_path):
@@ -115,6 +154,10 @@ def main():
     if not os.path.exists(happiness_file_path):
         print(f"Error: File '{happiness_file_path}' not found.")
         sys.exit(1)
+    
+    if not os.path.exists(quality_of_life_file_path):
+        print(f"Error: File '{quality_of_life_file_path}' not found.")
+        sys.exit(1)
 
     # Recreate tables (delete old data)
     recreate_tables()
@@ -122,6 +165,7 @@ def main():
     # Ingest both datasets
     ingest_population_csv(population_file_path)
     ingest_happiness_csv(happiness_file_path)
+    ingest_quality_of_life_csv(quality_of_life_file_path)
 
     print("Ingestion completed successfully.")
 
