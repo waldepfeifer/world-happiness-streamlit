@@ -1,5 +1,7 @@
 # Global Happiness Dashboard
 
+<img width="727" alt="image" src="https://github.com/user-attachments/assets/0f1df926-03a5-4d1c-964d-03e28e89b2bb" />
+
 A **Streamlit** application that analyzes and visualizes global happiness and prosperity metrics. The dashboard integrates multiple datasets—ranging from the [World Happiness Report](https://worldhappiness.report/) to [Legatum Prosperity](https://index.prosperity.com/)—and offers interactive filters, visualizations, and statistical summaries to help users explore happiness drivers across different countries and regions.
 
 ## Table of Contents
